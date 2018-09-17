@@ -1,0 +1,8 @@
+This repository contains some sample programs for working with the MNIST data 
+set. It is intended primarily as an exploratory playground for investigating 
+the inner workings of multi-layer neural networks and evaluating performance 
+of various changes.
+
+The MNIST data sets are available from http://yann.lecun.com/exdb/mnist/. That 
+page also documents the file formats.
+
