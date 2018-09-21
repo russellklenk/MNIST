@@ -11,14 +11,18 @@
 #include "strlib.h"
 #include "pathlib.h"
 
-#ifndef LINUX_PATH_STRING_MAX_CHARS
-#define LINUX_PATH_STRING_MAX_CHARS    4095
-#define LINUX_PATH_STRING_MAX_BYTES   (LINUX_PATH_STRING_MAX_CHARS*sizeof(char32_t))
-#endif
-
-#ifndef WIN32_PATH_STRING_MAX_CHARS
-#define WIN32_PATH_STRING_MAX_CHARS    4095
-#define WIN32_PATH_STRING_MAX_BYTES   (WIN32_PATH_STRING_MAX_CHARS*sizeof(char16_t))
+/* @summary Define various constants used internally within this module.
+ * LINUX_PATH_STRING_MAX_CHARS: The maximum number of characters in a Linux-style path string, not including the nul-terminator.
+ * WIN32_PATH_STRING_MAX_CHARS: The maximum number of characters in a Win32-style path string, not including the nul-terminator.
+ * LINUX_PATH_STRING_MAX_BYTES: The maximum number of bytes in a Linux-style UTF-8 encoded path string, including the nul-terminator.
+ * WIN32_PATH_STRING_MAX_BYTES: The maximum number of bytes in a Win32-style UTF-16 encoded path string, including the nul-terminator.
+ */
+#ifndef PATHLIB_CONSTANTS
+#   define PATHLIB_CONSTANTS
+#   define LINUX_PATH_STRING_MAX_CHARS    4095
+#   define WIN32_PATH_STRING_MAX_CHARS    4095
+#   define LINUX_PATH_STRING_MAX_BYTES  ((LINUX_PATH_STRING_MAX_CHARS*sizeof(char8_t )*4)+UTF8_NUL_BYTES)
+#   define WIN32_PATH_STRING_MAX_BYTES  ((WIN32_PATH_STRING_MAX_CHARS*sizeof(char16_t)*2)+UTF16_NUL_BYTES)
 #endif
 
 /* @summary Figure out the starting and ending points of the directory, filename and extension information in a Linux path string.
@@ -127,7 +131,7 @@ Win32PathExtractPathParts
             name_end[0] = (char16_t) '\\';
         }
         if (name_end[0] != '\\') {
-            name_end++;
+            name_end = Utf16StringNextCodepoint(NULL, NULL, name_end);
         } else {
             /* encountered a path separator.
              * update the end of the directory path string.
@@ -479,3 +483,4 @@ scan_for_end_of_root:
     o_parts->PathFlags = flags;
     return Win32PathExtractPathParts(o_parts, &sinfo);
 }
+
