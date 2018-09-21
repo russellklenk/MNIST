@@ -9,29 +9,27 @@
             "linux": {
                 "command": "make all"
             },
+            "windows": {
+                "command": "build.cmd"
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }, 
-            "problemMatcher": {
-                "owner": "cpp", 
-                "fileLocation": "absolute", 
-                "pattern": {
-                    "regexp": "^(.*):(\\d+):\\s+(warning|error|note):\\s|(.*)$", 
-                    "file": 1, 
-                    "line": 2, 
-                    "column": 3, 
-                    "severity": 4, 
-                    "message": 5
-                }
-            }
-        }, 
+            },
+            "problemMatcher": [
+                "$gcc",
+                "$msCompile"
+            ]
+        },
         {
-            "label": "clean", 
-            "type": "shell", 
+            "label": "clean",
+            "type": "shell",
             "linux": {
                 "command": "make clean"
-            }, 
+            },
+            "windows": {
+                "command": "clean.cmd"
+            },
             "group": {
                 "kind": "clean",
                 "isDefault": true

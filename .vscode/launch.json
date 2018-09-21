@@ -5,9 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) target1",
-            "type": "cppdbg",
+            "name": "Debug target1 (Windows)",
             "request": "launch",
+            "type": "cppvsdbg",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/build/target1.exe",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": ".",
+            "environment": [],
+            "externalConsole": true,
+            "symbolSearchPath": "SRV*F:\\SymCache*http://msdl.microsoft.com/download/symbols"
+        },
+        {
+            "name": "Debug target1 (Linux)",
+            "request": "launch",
+            "type": "cppdbg",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/target1",
             "args": [],

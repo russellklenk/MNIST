@@ -7,8 +7,10 @@
 #include "pathlib.h"
 
 #ifdef _WIN32
+#define UNUSED_ARG(x)  (x)
 #define END_OF_LINE    "\r\n"
 #else
+#define UNUSED_ARG(x)  (void)sizeof(x)
 #define END_OF_LINE    "\n"
 #endif
 
@@ -57,67 +59,31 @@ PrintPathFlags
         printf("INVALID");
     }
     if (flags & PATH_FLAG_ABSOLUTE) {
-        if (flags > PATH_FLAG_ABSOLUTE) {
-            printf("ABSOLUTE | ");
-        } else {
-            printf("ABSOLUTE");
-        }
+        printf("A");
     }
     if (flags & PATH_FLAG_RELATIVE) {
-        if (flags > PATH_FLAG_RELATIVE) {
-            printf("RELATIVE | ");
-        } else {
-            printf("RELATIVE");
-        }
+        printf("R");
     }
     if (flags & PATH_FLAG_NETWORK) {
-        if (flags > PATH_FLAG_NETWORK) {
-            printf("NETWORK | ");
-        } else {
-            printf("NETWORK");
-        }
+        printf("S");
     }
     if (flags & PATH_FLAG_DEVICE) {
-        if (flags > PATH_FLAG_DEVICE) {
-            printf("DEVICE | ");
-        } else {
-            printf("DEVICE");
-        }
+        printf("V");
     }
     if (flags & PATH_FLAG_LONG) {
-        if (flags > PATH_FLAG_LONG) {
-            printf("LONG | ");
-        } else {
-            printf("LONG");
-        }
+        printf("L");
     }
     if (flags & PATH_FLAG_ROOT) {
-        if (flags > PATH_FLAG_ROOT) {
-            printf("ROOT | ");
-        } else {
-            printf("ROOT");
-        }
+        printf("M");
     }
     if (flags & PATH_FLAG_DIRECTORY) {
-        if (flags > PATH_FLAG_DIRECTORY) {
-            printf("DIRECTORY | ");
-        } else {
-            printf("DIRECTORY");
-        }
+        printf("D");
     }
     if (flags & PATH_FLAG_FILENAME) {
-        if (flags > PATH_FLAG_FILENAME) {
-            printf("FILENAME | ");
-        } else {
-            printf("FILENAME");
-        }
+        printf("B");
     }
     if (flags & PATH_FLAG_EXTENSION) {
-        if (flags > PATH_FLAG_EXTENSION) {
-            printf("EXTENSION | ");
-        } else {
-            printf("EXTENSION");
-        }
+        printf("X");
     }
     printf(END_OF_LINE);
 }
@@ -145,7 +111,7 @@ PrintWin32PathParts
     char16_t const            *str
 )
 {
-    (void) sizeof(str);
+    UNUSED_ARG(str);
     PrintStringRange_u16("Root     :", parts->Root, parts->RootEnd);
     PrintStringRange_u16("Directory:", parts->Path, parts->PathEnd);
     PrintStringRange_u16("Filename :", parts->Filename, parts->FilenameEnd);
@@ -173,8 +139,8 @@ int main
 
     setlocale(LC_ALL, "en_US.utf8"); /* locale -a */
 
-    (void) sizeof(argc);
-    (void) sizeof(argv);
+    UNUSED_ARG(argc);
+    UNUSED_ARG(argv);
     printf("Hello, world!\n");
 
     (void) LinuxPathStringParse(&l_part, &l_info, NULL, path1);

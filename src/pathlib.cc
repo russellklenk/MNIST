@@ -13,10 +13,12 @@
 
 #ifndef LINUX_PATH_STRING_MAX_CHARS
 #define LINUX_PATH_STRING_MAX_CHARS    4095
+#define LINUX_PATH_STRING_MAX_BYTES   (LINUX_PATH_STRING_MAX_CHARS*sizeof(char32_t))
 #endif
 
 #ifndef WIN32_PATH_STRING_MAX_CHARS
-#define WIN32_PATH_STRING_MAX_CHARS    32767
+#define WIN32_PATH_STRING_MAX_CHARS    4095
+#define WIN32_PATH_STRING_MAX_BYTES   (WIN32_PATH_STRING_MAX_CHARS*sizeof(char16_t))
 #endif
 
 /* @summary Figure out the starting and ending points of the directory, filename and extension information in a Linux path string.
@@ -71,7 +73,6 @@ LinuxPathExtractPathParts
          * consider 'a.b' and '.a.b' and 'a.' to be filenames, but not '.a'.
          */
         while (iter >= name_beg) {
-            /* TODO: remove need for backward iteration - problematic for UTF-8 */
             if (*iter == '.' && iter != name_beg) {
                 name_end = iter;
                 extn_beg = iter + 1;
@@ -201,9 +202,9 @@ Win32PathStringGetMaxChars
 PATHLIB_API(char8_t*)
 LinuxPathBufferCreate
 (
-    struct STRING_INFO_UTF8 *o_strinfo, 
-    struct STRING_INFO_UTF8 *o_bufinfo, 
-    struct STRING_INFO_UTF8   *strinfo, 
+    struct STRING_INFO_UTF8 *o_strinfo,
+    struct STRING_INFO_UTF8 *o_bufinfo,
+    struct STRING_INFO_UTF8   *strinfo,
     char8_t const              *strbuf
 )
 {
@@ -213,9 +214,9 @@ LinuxPathBufferCreate
 PATHLIB_API(char16_t*)
 Win32PathBufferCreate
 (
-    struct STRING_INFO_UTF16 *o_strinfo, 
-    struct STRING_INFO_UTF16 *o_bufinfo, 
-    struct STRING_INFO_UTF16   *strinfo, 
+    struct STRING_INFO_UTF16 *o_strinfo,
+    struct STRING_INFO_UTF16 *o_bufinfo,
+    struct STRING_INFO_UTF16   *strinfo,
     char16_t const              *strbuf
 )
 {
@@ -235,8 +236,8 @@ PATHLIB_API(int)
 LinuxPathStringParse
 (
     struct PATH_PARTS_LINUX   *o_parts,
-    struct STRING_INFO_UTF8 *o_strinfo, 
-    struct STRING_INFO_UTF8   *strinfo, 
+    struct STRING_INFO_UTF8 *o_strinfo,
+    struct STRING_INFO_UTF8   *strinfo,
     char8_t const              *strbuf
 )
 {
@@ -301,9 +302,9 @@ LinuxPathStringParse
 PATHLIB_API(int)
 Win32PathStringParse
 (
-    struct PATH_PARTS_WIN32    *o_parts, 
-    struct STRING_INFO_UTF16 *o_strinfo, 
-    struct STRING_INFO_UTF16   *strinfo, 
+    struct PATH_PARTS_WIN32    *o_parts,
+    struct STRING_INFO_UTF16 *o_strinfo,
+    struct STRING_INFO_UTF16   *strinfo,
     char16_t const              *strbuf
 )
 {
@@ -478,4 +479,3 @@ scan_for_end_of_root:
     o_parts->PathFlags = flags;
     return Win32PathExtractPathParts(o_parts, &sinfo);
 }
-
