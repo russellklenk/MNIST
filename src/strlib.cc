@@ -9,6 +9,20 @@
 
 #include "strlib.h"
 
+/* @summary Define various constants used internally within this module.
+ * UTF8_NUL_BYTES               : The number of bytes used for a nul-terminator in a UTF-8 encoded string.
+ * UTF16_NUL_BYTES              : The number of bytes used for a nul-terminator in a UTF-16 encoded string.
+ * UTF8_MAX_BYTES_PER_CODEPOINT : The maximum number of bytes that may be used to encode a valid codepoint in a UTF-8 encoded string.
+ * UTF16_MAX_BYTES_PER_CODEPOINT: The maximum number of bytes that may be used to encode a valid codepoint in a UTF-16 encoded string.
+ */
+#ifndef STRLIB_CONSTANTS
+#   define STRLIB_CONSTANTS
+#   define UTF8_NUL_BYTES                   1
+#   define UTF16_NUL_BYTES                  2
+#   define UTF8_MAX_BYTES_PER_CODEPOINT     4
+#   define UTF16_MAX_BYTES_PER_CODEPOINT    4
+#endif
+
 /* @summary Search a UTF-8 string for a nul-terminator.
  * @param start A pointer to the first character to examine.
  * @return A pointer to the terminating nul.
@@ -156,7 +170,7 @@ Utf8StringCreate
     char8_t const              *strbuf
 )
 {   /* the maximum number of bytes per UTF-8 codepoint is 4 */
-    size_t  max_bytes =(max_chars * 4) + 1;
+    size_t  max_bytes =(max_chars * UTF8_MAX_BYTES_PER_CODEPOINT) + UTF8_NUL_BYTES;
     size_t init_chars = 0;
     size_t init_bytes = 0;
     char8_t       *buf = NULL;
@@ -167,7 +181,7 @@ Utf8StringCreate
             init_bytes = strinfo->LengthBytes;
             init_chars = strinfo->LengthChars;
         } else {
-            init_bytes = strlen(strbuf) + 1;
+            init_bytes = strlen(strbuf) + UTF8_NUL_BYTES;
             init_chars = mbstowcs(NULL, strbuf, 0);
         }
     }
@@ -194,7 +208,7 @@ Utf8StringCreate
             o_bufinfo->Buffer      = buf;
             o_bufinfo->BufferEnd   = buf + max_bytes;
             o_bufinfo->LengthBytes = max_bytes;
-            o_bufinfo->LengthChars =(max_bytes - 1)  / 4;
+            o_bufinfo->LengthChars =(max_bytes - UTF8_NUL_BYTES) / UTF8_MAX_BYTES_PER_CODEPOINT;
         }
         return buf;
     } else { /* memory allocation failed */
@@ -239,7 +253,7 @@ Utf8StringInfo
     assert(o_strinfo != NULL);
 
     if (strbuf) {
-        len_bytes = strlen(strbuf) + 1;
+        len_bytes = strlen(strbuf) + UTF8_NUL_BYTES;
         len_chars = mbstowcs(NULL, strbuf, 0);
     }
     o_strinfo->Buffer      =(char8_t*) strbuf;
@@ -279,7 +293,7 @@ Utf8StringNextCodepoint
         }
     }
     /* invalid codepoint, or NULL bufitr */
-    if (o_codepoint) *o_codepoint = 0xffffffff;
+    if (o_codepoint) *o_codepoint = 0xFFFFFFFF;
     if (o_bytecount) *o_bytecount = 0;
     return NULL;
 }
@@ -293,12 +307,8 @@ Utf16StringCreate
     size_t                    max_chars, 
     char16_t const              *strbuf
 )
-{   /* the maximum number of bytes per UTF-16 codepoint is 4 - 
-     * but this implementation assumes no surrogate pairs and 
-     * so it is technically UCS-2 encoding instead of UTF-16 - 
-     * only the basic multilingual plane is supported.
-     */
-    size_t  max_bytes =(max_chars * 2) + 2;
+{   /* the maximum number of bytes per UTF-16 codepoint is 4 */ 
+    size_t  max_bytes =(max_chars * UTF16_MAX_BYTES_PER_CODEPOINT) + UTF16_NUL_BYTES;
     size_t init_chars = 0;
     size_t init_bytes = 0;
     char16_t     *buf = NULL;
@@ -311,7 +321,7 @@ Utf16StringCreate
             init_chars = strinfo->LengthChars;
         } else {
             nul = Utf16FindNul(strbuf);
-            init_bytes =(size_t)((char8_t *)nul - (char8_t *)strbuf) + 2;
+            init_bytes =(size_t)((char8_t *)nul - (char8_t *)strbuf) + UTF16_NUL_BYTES;
             init_chars =(size_t)((char16_t*)nul - (char16_t*)strbuf);
         }
     }
@@ -338,7 +348,7 @@ Utf16StringCreate
             o_bufinfo->Buffer      = buf;
             o_bufinfo->BufferEnd   =(char16_t*)((char8_t*)buf + max_bytes);
             o_bufinfo->LengthBytes = max_bytes;
-            o_bufinfo->LengthChars =(max_bytes - 2) / 2;
+            o_bufinfo->LengthChars =(max_bytes - UTF16_NUL_BYTES) / UTF16_MAX_BYTES_PER_CODEPOINT;
         }
         return buf;
     } else { /* memory allocation failed */
@@ -385,7 +395,7 @@ Utf16StringInfo
 
     if (strbuf) {
         nul = Utf16FindNul(strbuf);
-        len_bytes =(size_t)((char8_t *)nul - (char8_t *)strbuf) + 2;
+        len_bytes =(size_t)((char8_t *)nul - (char8_t *)strbuf) + UTF16_NUL_BYTES;
         len_chars =(size_t)((char16_t*)nul - (char16_t*)strbuf);
     }
     o_strinfo->Buffer      =(char16_t*) (strbuf  );
@@ -414,7 +424,7 @@ Utf16StringNextCodepoint
         }
     }
     /* invalid codepoint, or NULL bufitr */
-    if (o_codepoint) *o_codepoint = 0xffffffff;
+    if (o_codepoint) *o_codepoint = 0xFFFFFFFF;
     if (o_bytecount) *o_bytecount = 0;
     return NULL;
 }
