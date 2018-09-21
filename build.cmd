@@ -28,8 +28,8 @@ GOTO Process_Argument
 IF [%BUILD_CONFIGURATION%] EQU [] SET BUILD_CONFIGURATION=release
 
 :: Specify the source files for the PAL library.
-SET COMMON_SOURCES="%SOURCESDIR%\*.c*"
-SET PLATFORM_SOURCES="%SOURCESDIR%\win32\*.c*"
+SET COMMON_SOURCES="%SOURCESDIR%\*.cc"
+SET PLATFORM_SOURCES="%SOURCESDIR%\win32\*.cc"
 
 :: Specify the libraries the test drivers should link with.
 SET LIBRARIES=User32.lib Gdi32.lib Shell32.lib Advapi32.lib winmm.lib
