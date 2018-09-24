@@ -14,15 +14,11 @@
 /* @summary Define various constants used internally within this module.
  * LINUX_PATH_STRING_MAX_CHARS: The maximum number of characters in a Linux-style path string, not including the nul-terminator.
  * WIN32_PATH_STRING_MAX_CHARS: The maximum number of characters in a Win32-style path string, not including the nul-terminator.
- * LINUX_PATH_STRING_MAX_BYTES: The maximum number of bytes in a Linux-style UTF-8 encoded path string, including the nul-terminator.
- * WIN32_PATH_STRING_MAX_BYTES: The maximum number of bytes in a Win32-style UTF-16 encoded path string, including the nul-terminator.
  */
 #ifndef PATHLIB_CONSTANTS
 #   define PATHLIB_CONSTANTS
 #   define LINUX_PATH_STRING_MAX_CHARS    4095
 #   define WIN32_PATH_STRING_MAX_CHARS    4095
-#   define LINUX_PATH_STRING_MAX_BYTES  ((LINUX_PATH_STRING_MAX_CHARS*sizeof(char8_t )*4)+UTF8_NUL_BYTES)
-#   define WIN32_PATH_STRING_MAX_BYTES  ((WIN32_PATH_STRING_MAX_CHARS*sizeof(char16_t)*2)+UTF16_NUL_BYTES)
 #endif
 
 /* @summary Figure out the starting and ending points of the directory, filename and extension information in a Linux path string.
@@ -472,7 +468,7 @@ scan_for_end_of_root:
             root_end[0]  = '\\';
             break;
         }
-        root_end++;
+        root_end = Utf16StringNextCodepoint(NULL, NULL, root_end);
     }
     if (root_end == path_end) {
         /* no additional components will be found */
@@ -483,4 +479,93 @@ scan_for_end_of_root:
     o_parts->PathFlags = flags;
     return Win32PathExtractPathParts(o_parts, &sinfo);
 }
+
+#if 0
+PATHLIB_API(char8_t*)
+LinuxPathBufferAppend
+(
+    struct STRING_INFO_UTF8 *o_dstinfo, 
+    struct STRING_INFO_UTF8   *dstinfo, 
+    struct STRING_INFO_UTF8   *appinfo, 
+    char8_t                    *dstbuf, 
+    char8_t const              *appstr
+);
+
+PATHLIB_API(char16_t*)
+Win32PathBufferAppend
+(
+    struct STRING_INFO_UTF16 *o_dstinfo, 
+    struct STRING_INFO_UTF16   *dstinfo, 
+    struct STRING_INFO_UTF16   *appinfo, 
+    char16_t                    *dstbuf, 
+    char16_t const              *appstr
+)
+{
+    STRING_INFO_UTF16 dsinfo;
+    STRING_INFO_UTF16 ssinfo;
+    
+    memset(&dsinfo, 0, sizeof(STRING_INFO_UTF16));
+    memset(&ssinfo, 0, sizeof(STRING_INFO_UTF16));
+
+    if (appstr != NULL) {
+        if (appinfo != NULL) {
+            memcpy(&ssinfo, appinfo, sizeof(STRING_INFO_UTF16));
+        } else {
+            Utf16StringInfo(&ssinfo, appstr);
+        }
+    }
+    if (dstbuf != NULL) {
+        if (dstinfo != NULL) {
+            memcpy(&dsinfo, dstinfo, sizeof(STRING_INFO_UTF16));
+        } else {
+            Utf16StringInfo(&dsinfo, dstbuf);
+        }
+    }
+    
+    if (ssinfo.LengthChars == 0) { /* nothing to append */
+        if (o_dstinfo) {
+            memcpy(o_dstinfo, &dsinfo, sizeof(STRING_INFO_UTF16));
+        } return dstbuf;
+    }
+    if (dsinfo.LengthChars + ssinfo.LengthChars > WIN32_PATH_STRING_MAX_CHARS) {
+        if (o_dstinfo) {
+            memcpy(o_dstinfo, &dsinfo, sizeof(STRING_INFO_UTF16));
+        } errno = ENAMETOOLONG;
+        return NULL;
+    }
+
+    if (dstbuf == NULL) {
+        if ((dstbuf = Win32PathBufferCreate(&dsinfo, NULL, appinfo, appstr)) != NULL) {
+            while (dstbuf && *dstbuf) {
+                if (*dstbuf == '/') {
+                    *dstbuf = '\\';
+                } dstbuf = Utf16StringNextCodepoint(NULL, NULL, dstbuf);
+            }
+            if (o_dstinfo) {
+                memcpy(o_dstinfo, &dsinfo, sizeof(STRING_INFO_UTF16));
+            } return dsinfo.Buffer;
+        } else {
+            if (o_dstinfo) {
+                memset(o_dstinfo, 0, sizeof(STRING_INFO_UTF16));
+            } return NULL; /* allocation failed */
+        }
+    }
+
+    if (dsinfo.LengthChars > 0 && dsinfo.BufferEnd[-2] != '\\') {
+        if (dsinfo.LengthChars + ssinfo.LengthChars + 1 > WIN32_PATH_STRING_MAX_CHARS) {
+            if (o_dstinfo) {
+                memcpy(o_dstinfo, &dsinfo, sizeof(STRING_INFO_UTF16));
+            } errno = ENAMETOOLONG;
+            return NULL;
+        }
+        dsinfo.BufferEnd[-1] = '\\';
+    }
+    while (ssinfo.Buffer != ssinfo.BufferEnd) {
+        if (ssinfo.Buffer[0] != '/') {
+            dsinfo.BufferEnd[-1] = ssinfo.Buffer++;
+        } else {
+        }
+    }
+}
+#endif
 

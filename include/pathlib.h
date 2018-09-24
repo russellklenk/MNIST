@@ -170,6 +170,42 @@ Win32PathStringParse
     char16_t const              *strbuf
 );
 
+/* @summary Append one path fragment to another.
+ * @param o_dstinfo Pointer to an optional STRING_INFO_UTF8 that if supplied will be initialized with the attributes of the destination string buffer after the path fragment is appended.
+ * @param dstinfo Optional information about the destination string buffer dstbuf that, if supplied, is used as an optimization.
+ * @param appinfo Optional information about the path fragment to append that, if supplied, is used as an optimization.
+ * @param dstbuf The buffer, returned by LinuxPathBufferCreate, to which the path fragment will be appended. If this value is NULL, a new path buffer is allocated and initialized with the contents of appstr.
+ * @param appstr The path fragment to append to the path fragment stored in dstbuf.
+ * @return A pointer to the destination path buffer (or the allocated path buffer, if dstbuf is NULL), or NULL if an error occurred.
+ */
+PATHLIB_API(char8_t*)
+LinuxPathBufferAppend
+(
+    struct STRING_INFO_UTF8 *o_dstinfo, 
+    struct STRING_INFO_UTF8   *dstinfo, 
+    struct STRING_INFO_UTF8   *appinfo, 
+    char8_t                    *dstbuf, 
+    char8_t const              *appstr
+);
+
+/* @summary Append one path fragment to another.
+ * @param o_dstinfo Pointer to an optional STRING_INFO_UTF16 that if supplied will be initialized with the attributes of the destination string buffer after the path fragment is appended.
+ * @param dstinfo Optional information about the destination string buffer dstbuf that, if supplied, is used as an optimization.
+ * @param appinfo Optional information about the path fragment to append that, if supplied, is used as an optimization.
+ * @param dstbuf The buffer, returned by Win32PathBufferCreate, to which the path fragment will be appended. If this value is NULL, a new path buffer is allocated and initialized with the contents of appstr.
+ * @param appstr The path fragment to append to the path fragment stored in dstbuf.
+ * @return A pointer to the destination path buffer (or the allocated path buffer, if dstbuf is NULL), or NULL if an error occurred.
+ */
+PATHLIB_API(char16_t*)
+Win32PathBufferAppend
+(
+    struct STRING_INFO_UTF16 *o_dstinfo, 
+    struct STRING_INFO_UTF16   *dstinfo, 
+    struct STRING_INFO_UTF16   *appinfo, 
+    char16_t                    *dstbuf, 
+    char16_t const              *appstr
+);
+
 #ifdef __cplusplus
 }; /* extern "C" */
 #endif
