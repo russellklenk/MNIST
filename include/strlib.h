@@ -26,6 +26,20 @@
 #endif /* STRLIB_STATIC */
 #endif /* STRLIB_API */
 
+/* @summary Define various constants used internally within this module.
+ * UTF8_NUL_BYTES               : The number of bytes used for a nul-terminator in a UTF-8 encoded string.
+ * UTF16_NUL_BYTES              : The number of bytes used for a nul-terminator in a UTF-16 encoded string.
+ * UTF8_MAX_BYTES_PER_CODEPOINT : The maximum number of bytes that may be used to encode a valid codepoint in a UTF-8 encoded string.
+ * UTF16_MAX_BYTES_PER_CODEPOINT: The maximum number of bytes that may be used to encode a valid codepoint in a UTF-16 encoded string.
+ */
+#ifndef STRLIB_CONSTANTS
+#   define STRLIB_CONSTANTS
+#   define UTF8_NUL_BYTES                   1
+#   define UTF16_NUL_BYTES                  2
+#   define UTF8_MAX_BYTES_PER_CODEPOINT     4
+#   define UTF16_MAX_BYTES_PER_CODEPOINT    4
+#endif
+
 /* @summary Typedef the various Unicode character types.
  * By default, the uchar.h header defines the char16_t and char32_t types.
  * However, the Visual C++ compiler included with Visual Studio 2013 does not include this header.
@@ -124,6 +138,18 @@ Utf8StringDelete
     char8_t *strbuf
 );
 
+/* @summary Determine the number of bytes in a UTF-8 encoded string given pointers to the start of the first codepoint and one-past the last codepoint.
+ * @param beg A pointer to the start of the first codepoint in the string.
+ * @param end A pointer to one-past the end of the final codepoint in the string.
+ * @return The number of bytes in the string.
+ */
+STRLIB_API(size_t)
+Utf8StringByteCount
+(
+    char8_t const *beg, 
+    char8_t const *end
+);
+
 /* @summary Search a UTF-8 encoded string buffer for the next nul character.
  * @param start A pointer to the first codepoint to examine.
  * @return A pointer to the next nul occurring at or subsequent to start.
@@ -159,6 +185,42 @@ Utf8StringNextCodepoint
     char8_t const   *bufitr
 );
 
+/* @summary Copy a single UTF-8 codepoint from one buffer to another.
+ * @param o_bytecount On return, this location is updated with the number of bytes in the codepoint pointed to by src.
+ * @param o_wordcount On return, this location is updated with the number of char8_t's that were/would be written to the dst buffer.
+ * @param dst The location to which the codepoint will be written.
+ * @param src A pointer to the start of the UTF-8 codepoint to copy.
+ * @return A pointer to the start of the next codepoint in the src buffer, or NULL if src pointed to an invalid codepoint.
+ */
+STRLIB_API(char8_t*)
+Utf8StringCopyCodepoint
+(
+    uint32_t *o_bytecount, 
+    uint32_t *o_wordcount, 
+    char8_t          *dst, 
+    char8_t const   *src
+);
+
+/* @summary Append one UTF-8 encoded string to another.
+ * @param o_dstinfo Pointer to an optional STRING_INFO_UTF8 to update with the attributes of the string after the append operation is performed.
+ * @param dstinfo Pointer to an optional STRING_INFO_UTF8 containing information about the string stored in dstbuf.
+ * @param srcinfo Pointer to an optional STRING_INFO_UTF8 containing information about the string stored in srcbuf.
+ * @param max_dst_bytes The size of the buffer starting at address dstbuf, in bytes.
+ * @param dstbuf Pointer to the start of the string stored in the destination buffer.
+ * @param srcbuf Pointer to the start of the nul-terminated, UTF-8 encoded string to append to the destination buffer.
+ * @return Zero if the append operation is successful, or non-zero if an error occurred.
+ */
+STRLIB_API(int)
+Utf8StringAppend
+(
+    struct STRING_INFO_UTF8 *o_dstinfo, 
+    struct STRING_INFO_UTF8   *dstinfo, 
+    struct STRING_INFO_UTF8   *srcinfo, 
+    size_t               max_dst_bytes,
+    char8_t                    *dstbuf, 
+    char8_t const              *srcbuf
+);
+
 /* @summary Allocate a buffer for storing UTF-16 encoded characters and optionally initialize the contents with an existing string.
  * @param o_strinfo Pointer to an optional STRING_INFO_UTF16 that if supplied will be initialized with the attributes of the returned string.
  * @param o_bufinfo Pointer to an optional STRING_INFO_UTF16 that if supplied will be initialized with the attributes of the returned buffer.
@@ -186,6 +248,18 @@ STRLIB_API(void)
 Utf16StringDelete
 (
     char16_t *strbuf
+);
+
+/* @summary Determine the number of bytes in a UTF-16 encoded string given pointers to the start of the first codepoint and one-past the last codepoint.
+ * @param beg A pointer to the start of the first codepoint in the string.
+ * @param end A pointer to one-past the end of the final codepoint in the string.
+ * @return The number of bytes in the string.
+ */
+STRLIB_API(size_t)
+Utf16StringByteCount
+(
+    char16_t const *beg, 
+    char16_t const *end
 );
 
 /* @summary Search a UTF-16 encoded string buffer for the next nul character.
@@ -218,9 +292,45 @@ Utf16StringInfo
 STRLIB_API(char16_t*)
 Utf16StringNextCodepoint
 (
-    char32_t   *o_codepoint, 
-    uint32_t   *o_bytecount, 
-    char16_t const  *bufitr
+    char32_t  *o_codepoint, 
+    uint32_t  *o_bytecount, 
+    char16_t const *bufitr
+);
+
+/* @summary Copy a single UTF-16 codepoint from one buffer to another.
+ * @param o_bytecount On return, this location is updated with the number of bytes in the codepoint pointed to by src.
+ * @param o_wordcount On return, this location is updated with the number of char16_t's that were/would be written to the dst buffer.
+ * @param dst The location to which the codepoint will be written.
+ * @param src A pointer to the start of the UTF-16 codepoint to copy.
+ * @return A pointer to the start of the next codepoint in the src buffer, or NULL if src pointed to an invalid codepoint.
+ */
+STRLIB_API(char16_t*)
+Utf16StringCopyCodepoint
+(
+    uint32_t *o_bytecount, 
+    uint32_t *o_wordcount, 
+    char16_t         *dst, 
+    char16_t const   *src
+);
+
+/* @summary Append one UTF-16 encoded string to another.
+ * @param o_dstinfo Pointer to an optional STRING_INFO_UTF16 to update with the attributes of the string after the append operation is performed.
+ * @param dstinfo Pointer to an optional STRING_INFO_UTF16 containing information about the string stored in dstbuf.
+ * @param srcinfo Pointer to an optional STRING_INFO_UTF8 containing information about the string stored in srcbuf.
+ * @param max_dst_bytes The size of the buffer starting at address dstbuf, in bytes.
+ * @param dstbuf Pointer to the start of the string stored in the destination buffer.
+ * @param srcbuf Pointer to the start of the nul-terminated, UTF-16 encoded string to append to the destination buffer.
+ * @return Zero if the append operation is successful, or non-zero if an error occurred.
+ */
+STRLIB_API(int)
+Utf16StringAppend
+(
+    struct STRING_INFO_UTF16 *o_dstinfo, 
+    struct STRING_INFO_UTF16   *dstinfo, 
+    struct STRING_INFO_UTF16   *srcinfo, 
+    size_t                max_dst_bytes,
+    char16_t                    *dstbuf, 
+    char16_t const              *srcbuf
 );
 
 /* @summary Calculate the number of bytes required to store the binary data converted from a base64-encoded string.

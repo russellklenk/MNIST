@@ -9,20 +9,6 @@
 
 #include "strlib.h"
 
-/* @summary Define various constants used internally within this module.
- * UTF8_NUL_BYTES               : The number of bytes used for a nul-terminator in a UTF-8 encoded string.
- * UTF16_NUL_BYTES              : The number of bytes used for a nul-terminator in a UTF-16 encoded string.
- * UTF8_MAX_BYTES_PER_CODEPOINT : The maximum number of bytes that may be used to encode a valid codepoint in a UTF-8 encoded string.
- * UTF16_MAX_BYTES_PER_CODEPOINT: The maximum number of bytes that may be used to encode a valid codepoint in a UTF-16 encoded string.
- */
-#ifndef STRLIB_CONSTANTS
-#   define STRLIB_CONSTANTS
-#   define UTF8_NUL_BYTES                   1
-#   define UTF16_NUL_BYTES                  2
-#   define UTF8_MAX_BYTES_PER_CODEPOINT     4
-#   define UTF16_MAX_BYTES_PER_CODEPOINT    4
-#endif
-
 /* @summary Search a UTF-8 string for a nul-terminator.
  * @param start A pointer to the first character to examine.
  * @return A pointer to the terminating nul.
@@ -231,6 +217,17 @@ Utf8StringDelete
     free(strbuf);
 }
 
+STRLIB_API(size_t)
+Utf8StringByteCount
+(
+    char8_t const *beg, 
+    char8_t const *end
+)
+{
+    assert(beg <= end);
+    return (size_t)(((char8_t const*) end) - ((char8_t const*) beg));
+}
+
 STRLIB_API(char8_t*)
 Utf8StringFindNul
 (
@@ -296,6 +293,115 @@ Utf8StringNextCodepoint
     if (o_codepoint) *o_codepoint = 0xFFFFFFFF;
     if (o_bytecount) *o_bytecount = 0;
     return NULL;
+}
+
+STRLIB_API(char8_t*)
+Utf8StringCopyCodepoint
+(
+    uint32_t *o_bytecount, 
+    uint32_t *o_wordcount, 
+    char8_t          *dst, 
+    char8_t const    *src
+)
+{
+    if (src != NULL) {
+        if ((src[0] & 0x80) == 0) { /* 0x00000 => 0x0007F */
+            if (o_bytecount) *o_bytecount = 1;
+            if (o_wordcount) *o_wordcount = 1;
+            if (dst) {
+               *dst++ = src[0];
+            } return (char8_t*)(src + 1);
+        }
+        if ((src[0] & 0xFF) >= 0xC2 && (src[0] & 0xFF) <= 0xDF && (src[1] & 0xC0) == 0x80) { /* 0x00080 => 0x007ff */
+            if (o_bytecount) *o_bytecount = 2;
+            if (o_wordcount) *o_wordcount = 2;
+            if (dst) {
+               *dst++ = src[0];
+               *dst++ = src[1];
+            } return (char8_t*)(src + 2);
+        }
+        if ((src[0] & 0xF0) == 0xE0 && (src[1] & 0xC0) == 0x80 && (src[2] & 0xC0) == 0x80) { /* 0x00800 => 0x0ffff */
+            if (o_bytecount) *o_bytecount = 3;
+            if (o_wordcount) *o_wordcount = 3;
+            if (dst) {
+               *dst++ = src[0];
+               *dst++ = src[1];
+               *dst++ = src[2];
+            } return (char8_t*)(src + 3);
+        }
+        if ((src[0] & 0xFF) == 0xF0 && (src[1] & 0xC0) == 0x80 && (src[2] & 0xC0) == 0x80 && (src[3] & 0xC0) == 0x80) { /* 0x10000 => 0x3ffff */
+            if (o_bytecount) *o_bytecount = 4;
+            if (o_wordcount) *o_wordcount = 4;
+            if (dst) {
+               *dst++ = src[0];
+               *dst++ = src[1];
+               *dst++ = src[2];
+               *dst++ = src[3];
+            } return (char8_t*)(src + 4);
+        }
+    }
+    if (o_bytecount) *o_bytecount = 0;
+    if (o_wordcount) *o_wordcount = 0;
+    return NULL;
+}
+
+STRLIB_API(int)
+Utf8StringAppend
+(
+    struct STRING_INFO_UTF8 *o_dstinfo, 
+    struct STRING_INFO_UTF8   *dstinfo, 
+    struct STRING_INFO_UTF8   *srcinfo, 
+    size_t               max_dst_bytes,
+    char8_t                    *dstbuf, 
+    char8_t const              *srcbuf
+)
+{
+    STRING_INFO_UTF8 dinfo;
+    STRING_INFO_UTF8 sinfo;
+    char8_t           *nul;
+
+    memset(&dinfo, 0, sizeof(STRING_INFO_UTF8));
+    memset(&sinfo, 0, sizeof(STRING_INFO_UTF8));
+
+    if (srcbuf != NULL) {
+        if (srcinfo != NULL) {
+            memcpy(&sinfo, srcinfo, sizeof(STRING_INFO_UTF8));
+        } else {
+            Utf8StringInfo(&sinfo , srcbuf);
+        }
+    }
+    if (dstbuf != NULL) {
+        if (dstinfo != NULL) {
+            memcpy(&dinfo, dstinfo, sizeof(STRING_INFO_UTF8));
+        } else {
+            Utf8StringInfo(&dinfo , dstbuf);
+        }
+    }
+    if (sinfo.LengthChars == 0) {
+        if (o_dstinfo) {
+            memcpy(o_dstinfo, &dinfo, sizeof(STRING_INFO_UTF8));
+        } return 0;
+    }
+    if (dinfo.LengthBytes == 0) {
+        if (o_dstinfo) {
+            memcpy(o_dstinfo, &dinfo, sizeof(STRING_INFO_UTF8));
+        } errno = ENOBUFS;
+        return -1;
+    }
+    if (max_dst_bytes < (sinfo.LengthBytes+dinfo.LengthBytes-UTF8_NUL_BYTES)) {
+        if (o_dstinfo) {
+            memcpy(o_dstinfo, &dinfo, sizeof(STRING_INFO_UTF8));
+        } errno = ENOBUFS;
+        return -1;
+    }
+    nul = &dinfo.BufferEnd[-1];
+    memcpy(nul, srcbuf, sinfo.LengthBytes);
+    if (o_dstinfo) {
+        o_dstinfo->BufferEnd    =((char8_t*) dinfo.Buffer) + (dinfo.LengthBytes-UTF8_NUL_BYTES) + sinfo.LengthBytes;
+        o_dstinfo->LengthBytes += sinfo.LengthBytes - UTF8_NUL_BYTES;
+        o_dstinfo->LengthChars += sinfo.LengthChars;
+    }
+    return 0;
 }
 
 STRLIB_API(char16_t*)
@@ -371,6 +477,17 @@ Utf16StringDelete
     free(strbuf);
 }
 
+STRLIB_API(size_t)
+Utf16StringByteCount
+(
+    char16_t const *beg, 
+    char16_t const *end
+)
+{
+    assert(beg <= end);
+    return(size_t)(((char8_t const*) end) - ((char8_t const*) beg));
+}
+
 STRLIB_API(char16_t*)
 Utf16StringFindNul
 (
@@ -427,6 +544,96 @@ Utf16StringNextCodepoint
     if (o_codepoint) *o_codepoint = 0xFFFFFFFF;
     if (o_bytecount) *o_bytecount = 0;
     return NULL;
+}
+
+STRLIB_API(char16_t*)
+Utf16StringCopyCodepoint
+(
+    uint32_t *o_bytecount, 
+    uint32_t *o_wordcount, 
+    char16_t         *dst, 
+    char16_t const   *src
+)
+{
+    if (src != NULL) {
+        if (src[0] <  0xD800 || src[0] > 0xDFFF) {
+            if (o_bytecount) *o_bytecount = 2;
+            if (o_wordcount) *o_wordcount = 1;
+            if (dst) {
+               *dst++ = src[0];
+            } return (char16_t*)(src + 1);
+        }
+        if (src[0] >= 0xD800 && src[0] <= 0xDBFF && src[1] >= 0xDC00 && src[1] <= 0xDFFF) {
+            if (o_bytecount) *o_bytecount = 4;
+            if (o_wordcount) *o_wordcount = 2;
+            if (dst) {
+               *dst++ = src[0];
+               *dst++ = src[1];
+            } return (char16_t*)(src + 2);
+        }
+    }
+    if (o_bytecount) *o_bytecount = 0;
+    if (o_wordcount) *o_wordcount = 0;
+    return NULL;
+}
+
+STRLIB_API(int)
+Utf16StringAppend
+(
+    struct STRING_INFO_UTF16 *o_dstinfo, 
+    struct STRING_INFO_UTF16   *dstinfo, 
+    struct STRING_INFO_UTF16   *srcinfo, 
+    size_t                max_dst_bytes,
+    char16_t                    *dstbuf, 
+    char16_t const              *srcbuf
+)
+{
+    STRING_INFO_UTF16 dinfo;
+    STRING_INFO_UTF16 sinfo;
+    char16_t           *nul;
+
+    memset(&dinfo, 0, sizeof(STRING_INFO_UTF16));
+    memset(&sinfo, 0, sizeof(STRING_INFO_UTF16));
+
+    if (srcbuf != NULL) {
+        if (srcinfo != NULL) {
+            memcpy(&sinfo, srcinfo, sizeof(STRING_INFO_UTF16));
+        } else {
+            Utf16StringInfo(&sinfo, srcbuf);
+        }
+    }
+    if (dstbuf != NULL) {
+        if (dstinfo != NULL) {
+            memcpy(&dinfo, dstinfo, sizeof(STRING_INFO_UTF16));
+        } else {
+            Utf16StringInfo(&dinfo, dstbuf);
+        }
+    }
+    if (sinfo.LengthChars == 0) {
+        if (o_dstinfo) {
+            memcpy(o_dstinfo, &dinfo, sizeof(STRING_INFO_UTF16));
+        } return 0;
+    }
+    if (dinfo.LengthBytes == 0) {
+        if (o_dstinfo) {
+            memcpy(o_dstinfo, &dinfo, sizeof(STRING_INFO_UTF16));
+        } errno = ENOBUFS;
+        return -1;
+    }
+    if (max_dst_bytes < (sinfo.LengthBytes+dinfo.LengthBytes-UTF16_NUL_BYTES)) {
+        if (o_dstinfo) {
+            memcpy(o_dstinfo, &dinfo, sizeof(STRING_INFO_UTF16));
+        } errno = ENOBUFS;
+        return -1;
+    }
+    nul = &dinfo.BufferEnd[-1];
+    memcpy(nul, srcbuf, sinfo.LengthBytes);
+    if (o_dstinfo) {
+        o_dstinfo->BufferEnd    =(char16_t*)(((char8_t*) dinfo.Buffer) + (dinfo.LengthBytes-UTF16_NUL_BYTES) + sinfo.LengthBytes);
+        o_dstinfo->LengthBytes += sinfo.LengthBytes - UTF16_NUL_BYTES;
+        o_dstinfo->LengthChars += sinfo.LengthChars;
+    }
+    return 0;
 }
 
 STRLIB_API(size_t)
