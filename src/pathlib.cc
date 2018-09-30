@@ -11,16 +11,6 @@
 #include "strlib.h"
 #include "pathlib.h"
 
-/* @summary Define various constants used internally within this module.
- * LINUX_PATH_STRING_MAX_CHARS: The maximum number of characters in a Linux-style path string, not including the nul-terminator.
- * WIN32_PATH_STRING_MAX_CHARS: The maximum number of characters in a Win32-style path string, not including the nul-terminator.
- */
-#ifndef PATHLIB_CONSTANTS
-#   define PATHLIB_CONSTANTS
-#   define LINUX_PATH_STRING_MAX_CHARS    4095
-#   define WIN32_PATH_STRING_MAX_CHARS    4095
-#endif
-
 /* @summary Figure out the starting and ending points of the directory, filename and extension information in a Linux path string.
  * @oaram o_parts The PATH_PARTS_LINUX to update. The Root, RootEnd and PathFlags fields must be initialized by the caller.
  * @param strinfo Information about the input path string.
@@ -29,7 +19,7 @@ static int
 LinuxPathExtractPathParts
 (
     struct PATH_PARTS_LINUX *o_parts,
-    struct STRING_INFO_UTF8 *strinfo
+    struct STRING_INFO      *strinfo
 )
 {
     char8_t     *iter = strinfo->BufferEnd;
@@ -78,7 +68,7 @@ LinuxPathExtractPathParts
                 extn_beg = iter + 1;
                 flags    = PATH_FLAG_FILENAME | PATH_FLAG_EXTENSION | flags;
             }
-            iter--;
+            iter = Utf8StringPrevCodepoint(NULL, NULL, iter);
         }
         if ((flags & PATH_FLAG_FILENAME) == 0) {
             dirs_end = name_end;
@@ -108,26 +98,26 @@ LinuxPathExtractPathParts
 static int
 Win32PathExtractPathParts
 (
-    struct PATH_PARTS_WIN32  *o_parts,
-    struct STRING_INFO_UTF16 *strinfo
+    struct PATH_PARTS_WIN32 *o_parts,
+    struct STRING_INFO      *strinfo
 )
 {
-    char16_t     *iter = strinfo->BufferEnd;
-    char16_t *path_end = strinfo->BufferEnd;
-    char16_t *extn_beg = strinfo->BufferEnd;
-    char16_t *extn_end = strinfo->BufferEnd;
-    char16_t *name_beg = o_parts->RootEnd;
-    char16_t *name_end = o_parts->RootEnd;
-    char16_t *dirs_beg = o_parts->RootEnd;
-    char16_t *dirs_end = o_parts->RootEnd;
-    uint32_t     flags = o_parts->PathFlags;
+    char8_t     *iter = strinfo->BufferEnd;
+    char8_t *path_end = strinfo->BufferEnd;
+    char8_t *extn_beg = strinfo->BufferEnd;
+    char8_t *extn_end = strinfo->BufferEnd;
+    char8_t *name_beg = o_parts->RootEnd;
+    char8_t *name_end = o_parts->RootEnd;
+    char8_t *dirs_beg = o_parts->RootEnd;
+    char8_t *dirs_end = o_parts->RootEnd;
+    uint32_t    flags = o_parts->PathFlags;
 
     while (name_end < path_end) {
         if (name_end[0] == '/') { /* normalize to system standard */
-            name_end[0] = (char16_t) '\\';
+            name_end[0] =  '\\';
         }
         if (name_end[0] != '\\') {
-            name_end = Utf16StringNextCodepoint(NULL, NULL, name_end);
+            name_end = Utf8StringNextCodepoint(NULL, NULL, name_end);
         } else {
             /* encountered a path separator.
              * update the end of the directory path string.
@@ -158,7 +148,7 @@ Win32PathExtractPathParts
                 extn_beg = iter + 1;
                 flags    = PATH_FLAG_FILENAME | PATH_FLAG_EXTENSION | flags;
             }
-            iter--;
+            iter = Utf8StringPrevCodepoint(NULL, NULL, iter);
         }
         if ((flags & PATH_FLAG_FILENAME) == 0) {
             dirs_end = name_end;
@@ -202,25 +192,25 @@ Win32PathStringGetMaxChars
 PATHLIB_API(char8_t*)
 LinuxPathBufferCreate
 (
-    struct STRING_INFO_UTF8 *o_strinfo,
-    struct STRING_INFO_UTF8 *o_bufinfo,
-    struct STRING_INFO_UTF8   *strinfo,
-    char8_t const              *strbuf
+    struct STRING_INFO *o_strinfo,
+    struct STRING_INFO *o_bufinfo,
+    struct STRING_INFO   *strinfo,
+    char8_t const         *strbuf
 )
 {
     return Utf8StringCreate(o_strinfo, o_bufinfo, strinfo, LINUX_PATH_STRING_MAX_CHARS, strbuf);
 }
 
-PATHLIB_API(char16_t*)
+PATHLIB_API(char8_t*)
 Win32PathBufferCreate
 (
-    struct STRING_INFO_UTF16 *o_strinfo,
-    struct STRING_INFO_UTF16 *o_bufinfo,
-    struct STRING_INFO_UTF16   *strinfo,
-    char16_t const              *strbuf
+    struct STRING_INFO *o_strinfo,
+    struct STRING_INFO *o_bufinfo,
+    struct STRING_INFO   *strinfo,
+    char8_t const         *strbuf
 )
 {
-    return Utf16StringCreate(o_strinfo, o_bufinfo, strinfo, WIN32_PATH_STRING_MAX_CHARS, strbuf);
+    return Utf8StringCreate(o_strinfo, o_bufinfo, strinfo, WIN32_PATH_STRING_MAX_CHARS, strbuf);
 }
 
 PATHLIB_API(void)
@@ -235,21 +225,21 @@ PathBufferDelete
 PATHLIB_API(int)
 LinuxPathStringParse
 (
-    struct PATH_PARTS_LINUX   *o_parts,
-    struct STRING_INFO_UTF8 *o_strinfo,
-    struct STRING_INFO_UTF8   *strinfo,
-    char8_t const              *strbuf
+    struct PATH_PARTS_LINUX *o_parts,
+    struct STRING_INFO    *o_strinfo,
+    struct STRING_INFO      *strinfo,
+    char8_t const            *strbuf
 )
 {
-    STRING_INFO_UTF8 sinfo;
-    char8_t      *path_beg = NULL;
-    char8_t      *path_end = NULL;
-    size_t       inp_chars = 0;
+    STRING_INFO sinfo;
+    char8_t *path_beg = NULL;
+    char8_t *path_end = NULL;
+    size_t  inp_chars = 0;
 
     if (o_parts == NULL) {
         assert(o_parts != NULL);
         if (o_strinfo) {
-            memset(o_strinfo, 0, sizeof(STRING_INFO_UTF8));
+            memset(o_strinfo, 0, sizeof(STRING_INFO));
         } errno = EINVAL;
         return -1;
     }
@@ -264,7 +254,7 @@ LinuxPathStringParse
         memset(o_parts, 0, sizeof(PATH_PARTS_LINUX));
         o_parts->PathFlags = PATH_FLAG_INVALID;
         if (o_strinfo) {
-            memset(o_strinfo, 0, sizeof(STRING_INFO_UTF8));
+            memset(o_strinfo, 0, sizeof(STRING_INFO));
         } errno = EINVAL;
         return -1;
     }
@@ -278,7 +268,7 @@ LinuxPathStringParse
     o_parts->Extension = path_end; o_parts->ExtensionEnd = path_end;
     o_parts->PathFlags = PATH_FLAGS_NONE;
     if (o_strinfo) {
-        memcpy(o_strinfo, &sinfo, sizeof(STRING_INFO_UTF8));
+        memcpy(o_strinfo, &sinfo, sizeof(STRING_INFO));
     }
 
     if (inp_chars >= 1) {
@@ -302,24 +292,24 @@ LinuxPathStringParse
 PATHLIB_API(int)
 Win32PathStringParse
 (
-    struct PATH_PARTS_WIN32    *o_parts,
-    struct STRING_INFO_UTF16 *o_strinfo,
-    struct STRING_INFO_UTF16   *strinfo,
-    char16_t const              *strbuf
+    struct PATH_PARTS_WIN32 *o_parts,
+    struct STRING_INFO    *o_strinfo,
+    struct STRING_INFO      *strinfo,
+    char8_t const            *strbuf
 )
 {
-    STRING_INFO_UTF16 sinfo;
-    char16_t      *path_beg = NULL;
-    char16_t      *path_end = NULL;
-    char16_t      *root_beg = NULL;
-    char16_t      *root_end = NULL;
-    size_t        inp_chars = 0;
-    uint32_t          flags = PATH_FLAGS_NONE;
+    STRING_INFO sinfo;
+    char8_t *path_beg = NULL;
+    char8_t *path_end = NULL;
+    char8_t *root_beg = NULL;
+    char8_t *root_end = NULL;
+    size_t   inp_chars = 0;
+    uint32_t     flags = PATH_FLAGS_NONE;
 
     if (o_parts == NULL) {
         assert(o_parts != NULL);
         if (o_strinfo) {
-            memset(o_strinfo, 0, sizeof(STRING_INFO_UTF16));
+            memset(o_strinfo, 0, sizeof(STRING_INFO));
         } errno = EINVAL;
         return -1;
     }
@@ -327,14 +317,14 @@ Win32PathStringParse
         if (strinfo != NULL) {
             sinfo = *strinfo;
         } else {
-            Utf16StringInfo(&sinfo, strbuf);
+            Utf8StringInfo(&sinfo, strbuf);
         }
     } else {
         assert(strbuf != NULL);
         memset(o_parts, 0, sizeof(PATH_PARTS_WIN32));
         o_parts->PathFlags = PATH_FLAG_INVALID;
         if (o_strinfo) {
-            memset(o_strinfo, 0, sizeof(STRING_INFO_UTF16));
+            memset(o_strinfo, 0, sizeof(STRING_INFO));
         } errno = EINVAL;
         return -1;
     }
@@ -348,7 +338,7 @@ Win32PathStringParse
     o_parts->Extension = path_end; o_parts->ExtensionEnd = path_end;
     o_parts->PathFlags = PATH_FLAGS_NONE;
     if (o_strinfo) {
-        memcpy(o_strinfo, &sinfo, sizeof(STRING_INFO_UTF16));
+        memcpy(o_strinfo, &sinfo, sizeof(STRING_INFO));
     }
 
     if (inp_chars >= 3) {
@@ -468,7 +458,7 @@ scan_for_end_of_root:
             root_end[0]  = '\\';
             break;
         }
-        root_end = Utf16StringNextCodepoint(NULL, NULL, root_end);
+        root_end = Utf8StringNextCodepoint(NULL, NULL, root_end);
     }
     if (root_end == path_end) {
         /* no additional components will be found */

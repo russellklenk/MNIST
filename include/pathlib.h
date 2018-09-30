@@ -1,5 +1,8 @@
 /**
  * @summary Defines types and functions for working with filesystem path strings.
+ * All paths are stored as UTF-8 encoded strings. For platforms like Windows that
+ * don't natively work with UTF-8 path strings the conversion functions from the 
+ * strlib.h module can be used to convert to or from the native encoding.
  */
 #ifndef __PATHLIB_H__
 #define __PATHLIB_H__
@@ -22,6 +25,16 @@
 #endif /* PATHLIB_STATIC */
 #endif /* PATHLIB_API */
 
+/* @summary Define various constants used internally within this module.
+ * LINUX_PATH_STRING_MAX_CHARS: The maximum number of characters in a Linux-style path string, not including the nul-terminator.
+ * WIN32_PATH_STRING_MAX_CHARS: The maximum number of characters in a Win32-style path string, not including the nul-terminator.
+ */
+#ifndef PATHLIB_CONSTANTS
+#   define PATHLIB_CONSTANTS
+#   define LINUX_PATH_STRING_MAX_CHARS    4095
+#   define WIN32_PATH_STRING_MAX_CHARS    4095
+#endif
+
 /* @summary Define the data used to access the path components of a Linux-style path string.
  * Linux-style paths are specified using UTF-8 encoding and are nul-terminated.
  */
@@ -41,14 +54,14 @@ typedef struct PATH_PARTS_LINUX {
  * The path string may specify a UNC path or a device path in addition to a file path.
  */
 typedef struct PATH_PARTS_WIN32 {
-    char16_t                    *Root;                                         /* A pointer to the first character of the path root. */
-    char16_t                    *RootEnd;                                      /* A pointer to one-past the last character of the path root component. */
-    char16_t                    *Path;                                         /* A pointer to the first character of the directory tree component. */
-    char16_t                    *PathEnd;                                      /* A pointer to one-past the last character of the directory tree component. */
-    char16_t                    *Filename;                                     /* A pointer to the first character of the filename component. */
-    char16_t                    *FilenameEnd;                                  /* A pointer to one-past the last character of the filename component. */
-    char16_t                    *Extension;                                    /* A pointer to the first character of the file extension component. */
-    char16_t                    *ExtensionEnd;                                 /* A pointer to one-past the last character of the file extension component. */
+    char8_t                     *Root;                                         /* A pointer to the first character of the path root. */
+    char8_t                     *RootEnd;                                      /* A pointer to one-past the last character of the path root component. */
+    char8_t                     *Path;                                         /* A pointer to the first character of the directory tree component. */
+    char8_t                     *PathEnd;                                      /* A pointer to one-past the last character of the directory tree component. */
+    char8_t                     *Filename;                                     /* A pointer to the first character of the filename component. */
+    char8_t                     *FilenameEnd;                                  /* A pointer to one-past the last character of the filename component. */
+    char8_t                     *Extension;                                    /* A pointer to the first character of the file extension component. */
+    char8_t                     *ExtensionEnd;                                 /* A pointer to one-past the last character of the file extension component. */
     uint32_t                     PathFlags;                                    /* One or more bitwise-OR'd values of the PATH_FLAGS enumeration. */
 } PATH_PARTS_WIN32;
 
@@ -97,36 +110,36 @@ Win32PathStringGetMaxChars
 
 /* @summary Allocate a buffer for manipulating a Linux-style path string and optionally initialize the contents with an existing string.
  * The buffer can hold up to the number of characters returned by the LinuxPathStringGetMaxChars function, plus one for the terminating nul.
- * @param o_strinfo Pointer to an optional STRING_INFO_UTF8 that if supplied will be initialized with the attributes of the returned string.
- * @param o_bufinfo Pointer to an optional STRING_INFO_UTF8 that if supplied will be initialized with the attributes of the returned buffer.
- * @param strinfo Pointer to an optional STRING_INFO_UTF8 that if supplied contains information about the string pointed to by strbuf.
+ * @param o_strinfo Pointer to an optional STRING_INFO that if supplied will be initialized with the attributes of the returned string.
+ * @param o_bufinfo Pointer to an optional STRING_INFO that if supplied will be initialized with the attributes of the returned buffer.
+ * @param strinfo Pointer to an optional STRING_INFO that if supplied contains information about the string pointed to by strbuf.
  * @param strbuf Pointer to an optional UTF-8 encoded, nul-terminated string that will be used as the initial contents of the new buffer.
  * @return A pointer to the start of the allocated buffer, or NULL if memory allocation failed.
  */
 PATHLIB_API(char8_t*)
 LinuxPathBufferCreate
 (
-    struct STRING_INFO_UTF8 *o_strinfo, 
-    struct STRING_INFO_UTF8 *o_bufinfo, 
-    struct STRING_INFO_UTF8   *strinfo, 
-    char8_t const              *strbuf
+    struct STRING_INFO *o_strinfo, 
+    struct STRING_INFO *o_bufinfo, 
+    struct STRING_INFO   *strinfo, 
+    char8_t const         *strbuf
 );
 
 /* @summary Allocate a buffer for manipulating a Win32-style path string and optionally initialize the contents with an existing string.
  * The buffer can hold up to the number of characters returned by the Win32PathStringGetMaxChars function, plus one for the terminating nul.
- * @param o_strinfo Pointer to an optional STRING_INFO_UTF16 that if supplied will be initialized with the attributes of the returned string.
- * @param o_bufinfo Pointer to an optional STRING_INFO_UTF16 that if supplied will be initialized with the attributes of the returned buffer.
- * @param strinfo Pointer to an optional STRING_INFO_UTF16 that if supplied contains information about the string pointed to by strbuf.
+ * @param o_strinfo Pointer to an optional STRING_INFO that if supplied will be initialized with the attributes of the returned string.
+ * @param o_bufinfo Pointer to an optional STRING_INFO that if supplied will be initialized with the attributes of the returned buffer.
+ * @param strinfo Pointer to an optional STRING_INFO that if supplied contains information about the string pointed to by strbuf.
  * @param strbuf Pointer to an optional UTF-16 encoded, nul-terminated string that will be used as the initial contents of the new buffer.
  * @return A pointer to the start of the allocated buffer, or NULL if memory allocation failed.
  */
-PATHLIB_API(char16_t*)
+PATHLIB_API(char8_t*)
 Win32PathBufferCreate
 (
-    struct STRING_INFO_UTF16 *o_strinfo, 
-    struct STRING_INFO_UTF16 *o_bufinfo, 
-    struct STRING_INFO_UTF16   *strinfo, 
-    char16_t const              *strbuf
+    struct STRING_INFO *o_strinfo, 
+    struct STRING_INFO *o_bufinfo, 
+    struct STRING_INFO   *strinfo, 
+    char8_t const         *strbuf
 );
 
 /* @summary Free a path buffer returned by the LinuxPathBufferCreate or Win32PathBufferCreate functions.
@@ -140,7 +153,7 @@ PathBufferDelete
 
 /* @summary Parse a Linux-style path string into its constituient parts.
  * @param o_parts The PATH_PARTS_LINUX structure to populate.
- * @oaran o_strinfo Pointer to an optional STRING_INFO_UTF8 that if supplied will be initialized with the attributes of the input string.
+ * @oaran o_strinfo Pointer to an optional STRING_INFO that if supplied will be initialized with the attributes of the input string.
  * @param strinfo Optional information about the input string strbuf that, if supplied, is used as an optimization.
  * @param strbuf A pointer to the start of the nul-terminated, UTF-8 encoded path string to parse.
  * @return Zero if the path string is parsed successfully, or non-zero if an error occurred.
@@ -148,15 +161,15 @@ PathBufferDelete
 PATHLIB_API(int)
 LinuxPathStringParse
 (
-    struct PATH_PARTS_LINUX   *o_parts,
-    struct STRING_INFO_UTF8 *o_strinfo, 
-    struct STRING_INFO_UTF8   *strinfo, 
-    char8_t const              *strbuf
+    struct PATH_PARTS_LINUX *o_parts,
+    struct STRING_INFO    *o_strinfo, 
+    struct STRING_INFO      *strinfo, 
+    char8_t const            *strbuf
 );
 
 /* @summary Parse a Win32-style path string into its constituient parts.
  * @param o_parts The PATH_PARTS_WIN32 structure to populate.
- * @oaran o_strinfo Pointer to an optional STRING_INFO_UTF16 that if supplied will be initialized with the attributes of the input string.
+ * @oaran o_strinfo Pointer to an optional STRING_INFO that if supplied will be initialized with the attributes of the input string.
  * @param strinfo Optional information about the input string strbuf that, if supplied, is used as an optimization.
  * @param strbuf A pointer to the start of the nul-terminated, UTF-16 encoded path string to parse.
  * @return Zero if the path string is parsed successfully, or non-zero if an error occurred.
@@ -164,14 +177,14 @@ LinuxPathStringParse
 PATHLIB_API(int)
 Win32PathStringParse
 (
-    struct PATH_PARTS_WIN32    *o_parts, 
-    struct STRING_INFO_UTF16 *o_strinfo, 
-    struct STRING_INFO_UTF16   *strinfo, 
-    char16_t const              *strbuf
+    struct PATH_PARTS_WIN32 *o_parts, 
+    struct STRING_INFO    *o_strinfo, 
+    struct STRING_INFO      *strinfo, 
+    char8_t const            *strbuf
 );
 
 /* @summary Append one path fragment to another.
- * @param o_dstinfo Pointer to an optional STRING_INFO_UTF8 that if supplied will be initialized with the attributes of the destination string buffer after the path fragment is appended.
+ * @param o_dstinfo Pointer to an optional STRING_INFO that if supplied will be initialized with the attributes of the destination string buffer after the path fragment is appended.
  * @param dstinfo Optional information about the destination string buffer dstbuf that, if supplied, is used as an optimization.
  * @param appinfo Optional information about the path fragment to append that, if supplied, is used as an optimization.
  * @param dstbuf The buffer, returned by LinuxPathBufferCreate, to which the path fragment will be appended. If this value is NULL, a new path buffer is allocated and initialized with the contents of appstr.
@@ -181,29 +194,29 @@ Win32PathStringParse
 PATHLIB_API(char8_t*)
 LinuxPathBufferAppend
 (
-    struct STRING_INFO_UTF8 *o_dstinfo, 
-    struct STRING_INFO_UTF8   *dstinfo, 
-    struct STRING_INFO_UTF8   *appinfo, 
-    char8_t                    *dstbuf, 
-    char8_t const              *appstr
+    struct STRING_INFO *o_dstinfo, 
+    struct STRING_INFO   *dstinfo, 
+    struct STRING_INFO   *appinfo, 
+    char8_t               *dstbuf, 
+    char8_t const         *appstr
 );
 
 /* @summary Append one path fragment to another.
- * @param o_dstinfo Pointer to an optional STRING_INFO_UTF16 that if supplied will be initialized with the attributes of the destination string buffer after the path fragment is appended.
+ * @param o_dstinfo Pointer to an optional STRING_INFO that if supplied will be initialized with the attributes of the destination string buffer after the path fragment is appended.
  * @param dstinfo Optional information about the destination string buffer dstbuf that, if supplied, is used as an optimization.
  * @param appinfo Optional information about the path fragment to append that, if supplied, is used as an optimization.
  * @param dstbuf The buffer, returned by Win32PathBufferCreate, to which the path fragment will be appended. If this value is NULL, a new path buffer is allocated and initialized with the contents of appstr.
  * @param appstr The path fragment to append to the path fragment stored in dstbuf.
  * @return A pointer to the destination path buffer (or the allocated path buffer, if dstbuf is NULL), or NULL if an error occurred.
  */
-PATHLIB_API(char16_t*)
+PATHLIB_API(char8_t*)
 Win32PathBufferAppend
 (
-    struct STRING_INFO_UTF16 *o_dstinfo, 
-    struct STRING_INFO_UTF16   *dstinfo, 
-    struct STRING_INFO_UTF16   *appinfo, 
-    char16_t                    *dstbuf, 
-    char16_t const              *appstr
+    struct STRING_INFO *o_dstinfo, 
+    struct STRING_INFO   *dstinfo, 
+    struct STRING_INFO   *appinfo, 
+    char8_t               *dstbuf, 
+    char8_t const         *appstr
 );
 
 #ifdef __cplusplus

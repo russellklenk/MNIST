@@ -30,21 +30,6 @@ PrintStringRange_u8
 }
 
 static void
-PrintStringRange_u16
-(
-    char     const *title, 
-    char16_t const   *beg, 
-    char16_t const   *end
-)
-{
-    printf("%s", title);
-    while (beg != end) {
-        printf("%lc", *beg++);
-    }
-    printf(END_OF_LINE);
-}
-
-static void
 PrintPathFlags
 (
     char const *title, 
@@ -108,15 +93,15 @@ static void
 PrintWin32PathParts
 (
     struct PATH_PARTS_WIN32 *parts, 
-    char16_t const            *str
+    char8_t const             *str
 )
 {
     UNUSED_ARG(str);
-    PrintStringRange_u16("Root     :", parts->Root, parts->RootEnd);
-    PrintStringRange_u16("Directory:", parts->Path, parts->PathEnd);
-    PrintStringRange_u16("Filename :", parts->Filename, parts->FilenameEnd);
-    PrintStringRange_u16("Extension:", parts->Extension, parts->ExtensionEnd);
-    PrintPathFlags      ("Flags    :", parts->PathFlags);
+    PrintStringRange_u8("Root     :", parts->Root, parts->RootEnd);
+    PrintStringRange_u8("Directory:", parts->Path, parts->PathEnd);
+    PrintStringRange_u8("Filename :", parts->Filename, parts->FilenameEnd);
+    PrintStringRange_u8("Extension:", parts->Extension, parts->ExtensionEnd);
+    PrintPathFlags     ("Flags    :", parts->PathFlags);
     printf(END_OF_LINE);
 }
 
@@ -126,18 +111,22 @@ int main
     char **argv
 )
 {
-    STRING_INFO_UTF16 w_info;
-    STRING_INFO_UTF8  l_info;
+    STRING_INFO       w_info;
+    STRING_INFO       l_info;
     PATH_PARTS_LINUX  l_part;
     PATH_PARTS_WIN32  w_part;
-    char8_t  const    *path1 = u8"/abs/path/to/file.ext";
-    char8_t  const    *path2 = u8"rel/path/to/file.ext";
-    char8_t  const    *path3 = u8".filename";
-    char8_t  const    *path4 = u8"file.ext";
-    char16_t const    *path5 = u"C:\\dos\\path\\to\\file.ext";
-    char16_t const    *path6 = u"\\\\?\\C:\\long\\unc\\path\\to\\file.ext";
+    char8_t const     *path1 = u8"/abs/path/to/file.ext";
+    char8_t const     *path2 = u8"rel/path/to/file.ext";
+    char8_t const     *path3 = u8".filename";
+    char8_t const     *path4 = u8"file.ext";
+    char8_t const     *path5 = u8"C:\\dos\\path\\to\\file.ext";
+    char8_t const     *path6 = u8"\\\\?\\C:\\long\\unc\\path\\to\\file.ext";
 
+#ifdef _WIN32
+    setlocale(LC_ALL, "en-US.UTF8");
+#else
     setlocale(LC_ALL, "en_US.utf8"); /* locale -a */
+#endif
 
     UNUSED_ARG(argc);
     UNUSED_ARG(argv);
