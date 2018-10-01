@@ -498,7 +498,7 @@ Utf8StringCreateFromUtf16
     uint32_t const bmask = 0xBF;
     uint32_t const bmark = 0x80;
     char32_t      ch, c2;
-    uint8_t           nb;
+    uint8_t           nb = 0;
     uint8_t  const  F[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
 
     if (strbuf) { /* determine the number of bytes required to store the converted string */
@@ -696,7 +696,7 @@ Utf8StringConvertToUtf16
 )
 {
     STRING_INFO  sinfo;
-    uint32_t max_bytes = 0;
+    size_t   max_bytes = 0;
     char32_t     utf32 = 0;
     uint32_t    nbytes = 0;
     uint32_t    nchars = 0;
@@ -757,7 +757,7 @@ Utf8StringConvertToUtf32
 )
 {
     STRING_INFO  sinfo;
-    uint32_t max_bytes = 0;
+    size_t   max_bytes = 0;
     char32_t     utf32 = 0;
     uint32_t    nbytes = 0;
     uint32_t    nchars = 0;
@@ -960,7 +960,7 @@ Utf8StringPrevCodepoint
     if (bufitr) {
         char8_t   *p;
         uint32_t   n = 0;
-        if ((*bufitr & 0xC0) == 0) { /* bufitr points at the start of a codepoint */
+        if ((*bufitr & 0x80) == 0) { /* bufitr points at the start of a codepoint */
             p = (char8_t*)(bufitr - 1);
         } else { /* bufitr points within a codepoint */
             p = (char8_t*)(bufitr);
